@@ -206,6 +206,26 @@ export default defineComponent({
         console.log('✅ [Register] 세션 정보:', data.session)
         console.log('✅ [Register] user_metadata:', data.user?.user_metadata)
 
+        // user_profiles 테이블에 프로필 생성
+        if (data.user) {
+          console.log('📝 [Register] user_profiles 생성 시작')
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: data.user.id,
+              name: formData.name,
+              email: formData.email,
+              age: formData.age
+            })
+
+          if (profileError) {
+            console.error('❌ [Register] 프로필 생성 실패:', profileError)
+            // 프로필 생성 실패는 치명적이지 않으므로 계속 진행
+          } else {
+            console.log('✅ [Register] 프로필 생성 성공')
+          }
+        }
+
         // 이메일 인증 확인 메시지
         if (data.session) {
           // 세션이 바로 생성된 경우 (이메일 인증 불필요)
