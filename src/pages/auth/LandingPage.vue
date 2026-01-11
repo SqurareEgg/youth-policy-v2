@@ -1,5 +1,5 @@
 <template>
-  <q-page class="flex flex-center bg-gradient">
+  <div class="fullscreen flex flex-center bg-gradient">
     <div class="landing-container">
       <div class="text-center q-mb-xl">
         <h3 class="text-h3 text-weight-bold q-mb-md text-primary">
@@ -38,7 +38,7 @@
         </p>
       </div>
     </div>
-  </q-page>
+  </div>
 </template>
 
 <script>
