@@ -48,8 +48,14 @@
         </q-card>
       </div>
 
+      <!-- 로딩 상태 -->
+      <div v-if="loading" class="text-center q-py-xl">
+        <q-spinner color="primary" size="50px" />
+        <div class="text-body1 text-grey-7 q-mt-md">카테고리 불러오는 중...</div>
+      </div>
+
       <!-- 카테고리 그리드 -->
-      <div class="categories-grid">
+      <div v-else class="categories-grid">
         <q-card
           v-for="category in categories"
           :key="category.id"
@@ -98,6 +104,8 @@
 <script>
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { supabase } from '../boot/supabase'
+import { useQuasar } from 'quasar'
 
 export default defineComponent({
   name: 'IndexPage',
@@ -105,86 +113,119 @@ export default defineComponent({
   setup() {
     console.log('🏠 [Index] 메인 페이지 로드')
 
+    const $q = useQuasar()
     const router = useRouter()
+    const categories = ref([])
+    const loading = ref(true)
 
-    // 임시 카테고리 데이터 (하드코딩 - DB 연결 전)
-    const categories = ref([
-      {
-        id: 1,
-        name: '주거',
-        description: '청년 주거 지원 정책',
-        icon: 'home',
-        color: 'primary',
-        progress: 25,
-        videoCount: 8,
-        totalMinutes: 45
-      },
-      {
-        id: 2,
-        name: '금융',
-        description: '청년 금융 지원 정책',
-        icon: 'account_balance',
-        color: 'green',
-        progress: 50,
-        videoCount: 10,
-        totalMinutes: 60
-      },
-      {
-        id: 3,
-        name: '고용',
-        description: '청년 고용 지원 정책',
-        icon: 'work',
-        color: 'orange',
-        progress: 75,
-        videoCount: 12,
-        totalMinutes: 70
-      },
-      {
-        id: 4,
-        name: '교육',
-        description: '청년 교육 지원 정책',
-        icon: 'school',
-        color: 'blue',
-        progress: 0,
-        videoCount: 9,
-        totalMinutes: 50
-      },
-      {
-        id: 5,
-        name: '복지문화',
-        description: '청년 복지 및 문화 정책',
-        icon: 'favorite',
-        color: 'pink',
-        progress: 40,
-        videoCount: 11,
-        totalMinutes: 65
-      },
-      {
-        id: 6,
-        name: '참여권리',
-        description: '청년 참여 및 권리 정책',
-        icon: 'how_to_vote',
-        color: 'purple',
-        progress: 10,
-        videoCount: 7,
-        totalMinutes: 40
-      }
-    ])
+    // 카테고리 색상 매핑
+    const colorMap = {
+      'location_city': 'deep-purple',
+      'home': 'primary',
+      'health_and_safety': 'pink',
+      'account_balance': 'green',
+      'how_to_vote': 'purple',
+      'school': 'blue'
+    }
 
-    console.log('🏠 [Index] 카테고리 목록:', categories.value.map(c => c.name))
-
-    // 전체 이수율 계산 (임시 데이터 기반)
+    // 전체 이수율 계산
     const overallProgress = computed(() => {
-      const total = categories.value.reduce((sum, cat) => sum + cat.progress, 0)
+      if (categories.value.length === 0) return 0
+      const total = categories.value.reduce((sum, cat) => sum + (cat.progress || 0), 0)
       const average = Math.round(total / categories.value.length)
-      console.log('📊 [Index] 전체 이수율 계산:', average)
       return average
     })
+
+    // Supabase에서 카테고리 및 진도율 불러오기
+    async function loadCategories() {
+      console.log('📚 [Index] 카테고리 데이터 로딩 시작')
+
+      try {
+        if (!supabase) {
+          console.warn('⚠️ [Index] Supabase 미설정 - 더미 데이터 사용')
+          loading.value = false
+          return
+        }
+
+        // 현재 사용자 정보 가져오기
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+          console.error('❌ [Index] 사용자 로그인 필요')
+          loading.value = false
+          return
+        }
+
+        console.log('👤 [Index] 현재 사용자:', user.id)
+
+        // 카테고리 데이터 가져오기
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('education_categories')
+          .select('*')
+          .eq('is_active', true)
+          .order('order_num', { ascending: true })
+
+        if (categoriesError) {
+          console.error('❌ [Index] 카테고리 조회 실패:', categoriesError)
+          throw categoriesError
+        }
+
+        console.log('✅ [Index] 카테고리 조회 성공:', categoriesData.length + '개')
+
+        // 각 카테고리별 진도율 가져오기
+        const categoriesWithProgress = await Promise.all(
+          categoriesData.map(async (category) => {
+            // 사용자의 해당 카테고리 진도율 조회
+            const { data: progressData } = await supabase
+              .from('user_category_progress')
+              .select('total_progress')
+              .eq('user_id', user.id)
+              .eq('category_id', category.id)
+              .single()
+
+            // 영상 정보 가져오기
+            const { data: videoData } = await supabase
+              .from('category_videos')
+              .select('duration')
+              .eq('category_id', category.id)
+
+            const videoCount = videoData?.length || 0
+            const totalMinutes = videoData
+              ? Math.round(videoData.reduce((sum, v) => sum + v.duration, 0) / 60)
+              : 0
+
+            return {
+              id: category.id,
+              name: category.title,
+              description: category.description,
+              icon: category.icon || 'category',
+              color: colorMap[category.icon] || 'grey',
+              progress: progressData?.total_progress || 0,
+              videoCount,
+              totalMinutes
+            }
+          })
+        )
+
+        categories.value = categoriesWithProgress
+        console.log('✅ [Index] 진도율 포함 카테고리 데이터 로딩 완료')
+        console.log('📊 [Index] 전체 이수율:', overallProgress.value + '%')
+
+      } catch (error) {
+        console.error('❌ [Index] 데이터 로딩 에러:', error)
+        $q.notify({
+          type: 'negative',
+          message: '카테고리 데이터를 불러오는 중 오류가 발생했습니다.',
+          position: 'top'
+        })
+      } finally {
+        loading.value = false
+      }
+    }
 
     function goToCategory(category) {
       console.log('🔗 [Index] 카테고리 클릭:', category.name)
       console.log('🔗 [Index] 카테고리 ID:', category.id)
-      console.log('🔗 [Index] 카테고리 상세 페이지로 이동: /category/' + category.id)
 
       router.push({
         name: 'category-detail',
@@ -194,13 +235,14 @@ export default defineComponent({
 
     onMounted(() => {
       console.log('✅ [Index] 메인 페이지 마운트 완료')
-      console.log('📊 [Index] 전체 이수율:', overallProgress.value + '%')
+      loadCategories()
     })
 
     return {
       categories,
       overallProgress,
-      goToCategory
+      goToCategory,
+      loading
     }
   }
 })
