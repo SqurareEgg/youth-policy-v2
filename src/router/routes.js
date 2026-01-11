@@ -76,32 +76,25 @@ async function guestOnly(to, from, next) {
 
 const routes = [
   // ============================================
-  // 랜딩 페이지 (루트)
+  // 랜딩 페이지 (루트) - 직접 렌더링으로 변경
   // ============================================
   {
     path: '/',
-    redirect: async () => {
-      console.log('🔀 [Route] 루트 접근 - 리다이렉트 체크')
+    name: 'landing',
+    component: () => import('../pages/auth/LandingPage.vue'),
+    beforeEnter: async (to, from, next) => {
+      console.log('🔀 [Route] 루트 접근 - 로그인 체크')
       if (supabase) {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
           console.log('🔀 [Route] 로그인 상태 - /main으로 이동')
-          return '/main'
+          next('/main')
+          return
         }
       }
-      console.log('🔀 [Route] 비로그인 상태 - /landing으로 이동')
-      return '/landing'
-    }
-  },
-
-  // ============================================
-  // 랜딩 페이지 (비로그인 사용자)
-  // ============================================
-  {
-    path: '/landing',
-    name: 'landing',
-    component: () => import('../pages/auth/LandingPage.vue'),
-    beforeEnter: guestOnly,
+      console.log('🔀 [Route] 비로그인 상태 - 랜딩 페이지 표시')
+      next()
+    },
     meta: {
       title: '청년 정책 교육'
     }
