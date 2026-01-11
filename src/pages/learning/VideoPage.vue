@@ -59,59 +59,26 @@
             <div class="text-h6 text-weight-bold q-mb-md">{{ video.title }}</div>
             <div v-if="video.description" class="text-body2 text-grey-7 q-mb-md">{{ video.description }}</div>
 
-            <!-- YouTube iframe -->
+            <!-- YouTube Player (YouTube API가 제어) -->
             <div class="video-container">
-              <iframe
-                ref="videoIframe"
-                :src="`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&origin=${origin}`"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
+              <div id="youtube-player"></div>
             </div>
 
-            <!-- 시청 시간 추적 안내 -->
+            <!-- 재생 상태 표시 -->
             <div class="q-mt-md text-center">
-              <q-chip v-if="isTracking" color="red" text-color="white" icon="play_arrow">
-                시청 시간 추적 중...
+              <q-chip v-if="isPlaying" color="red" text-color="white" icon="play_arrow">
+                재생 중 - 자동으로 시청 시간 추적 중...
+              </q-chip>
+              <q-chip v-else-if="completed" color="green" text-color="white" icon="check_circle">
+                완료됨
               </q-chip>
               <q-chip v-else color="grey" text-color="white" icon="pause">
-                일시정지됨
+                일시정지 - 재생하면 자동으로 추적됩니다
               </q-chip>
             </div>
-          </q-card-section>
-        </q-card>
 
-        <!-- 수동 추적 버튼 (YouTube API 없이 사용) -->
-        <q-card flat bordered class="control-card q-mb-lg">
-          <q-card-section>
-            <div class="text-subtitle2 q-mb-md">수동 제어</div>
-            <div class="row q-gutter-sm">
-              <q-btn
-                v-if="!isTracking"
-                color="red"
-                icon="play_arrow"
-                label="시청 시작"
-                @click="startTracking"
-                :disabled="completed"
-              />
-              <q-btn
-                v-else
-                color="grey"
-                icon="pause"
-                label="일시정지"
-                @click="stopTracking"
-              />
-              <q-btn
-                color="primary"
-                icon="restart_alt"
-                label="처음부터"
-                @click="resetTracking"
-                outline
-              />
-            </div>
-            <div class="text-caption text-grey-7 q-mt-sm">
-              영상을 시청하는 동안 '시청 시작' 버튼을 누르세요. 매 5초마다 자동으로 진도가 저장됩니다.
+            <div class="text-caption text-grey-6 text-center q-mt-sm">
+              영상을 재생하면 자동으로 시청 시간이 기록됩니다. 버튼을 누를 필요가 없습니다!
             </div>
           </q-card-section>
         </q-card>
@@ -151,11 +118,11 @@ export default defineComponent({
     const video = ref({})
     const userId = ref(null)
     const watchTime = ref(0)
-    const isTracking = ref(false)
+    const isPlaying = ref(false)
     const completed = ref(false)
     const trackingInterval = ref(null)
-    const videoIframe = ref(null)
-    const origin = ref(window.location.origin)
+    const player = ref(null)
+    const apiReady = ref(false)
 
     // YouTube ID 추출
     const youtubeId = computed(() => {
@@ -194,6 +161,158 @@ export default defineComponent({
       const mins = Math.floor(seconds / 60)
       const secs = seconds % 60
       return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    // YouTube API 로드
+    function loadYouTubeAPI() {
+      return new Promise((resolve) => {
+        if (window.YT && window.YT.Player) {
+          console.log('✅ [Video] YouTube API 이미 로드됨')
+          apiReady.value = true
+          resolve()
+          return
+        }
+
+        if (window.YT && !window.YT.Player) {
+          console.log('⏳ [Video] YouTube API 로딩 중...')
+          window.onYouTubeIframeAPIReady = () => {
+            console.log('✅ [Video] YouTube API 로드 완료')
+            apiReady.value = true
+            resolve()
+          }
+          return
+        }
+
+        console.log('🎬 [Video] YouTube API 스크립트 로드 시작')
+        const tag = document.createElement('script')
+        tag.src = 'https://www.youtube.com/iframe_api'
+
+        window.onYouTubeIframeAPIReady = () => {
+          console.log('✅ [Video] YouTube API 로드 완료')
+          apiReady.value = true
+          resolve()
+        }
+
+        const firstScriptTag = document.getElementsByTagName('script')[0]
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag)
+      })
+    }
+
+    // YouTube Player 초기화
+    function initPlayer() {
+      if (!youtubeId.value) {
+        console.error('❌ [Video] YouTube ID 없음')
+        return
+      }
+
+      if (!window.YT || !window.YT.Player) {
+        console.error('❌ [Video] YouTube API 미로드')
+        return
+      }
+
+      console.log('🎬 [Video] YouTube Player 초기화 시작')
+
+      player.value = new window.YT.Player('youtube-player', {
+        videoId: youtubeId.value,
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          modestbranding: 1,
+          rel: 0
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange
+        }
+      })
+    }
+
+    // 플레이어 준비 완료
+    function onPlayerReady(event) {
+      console.log('✅ [Video] YouTube Player 준비 완료')
+
+      // 이전 시청 위치로 이동
+      if (watchTime.value > 0 && !completed.value) {
+        player.value.seekTo(watchTime.value, true)
+        console.log('🎬 [Video] 이전 시청 위치로 이동:', watchTime.value, '초')
+      }
+    }
+
+    // 플레이어 상태 변경
+    function onPlayerStateChange(event) {
+      const state = event.data
+
+      console.log('🎬 [Video] 플레이어 상태 변경:', state)
+
+      // YT.PlayerState.PLAYING = 1
+      if (state === 1) {
+        console.log('▶️ [Video] 재생 시작')
+        startAutoTracking()
+      }
+      // YT.PlayerState.PAUSED = 2
+      else if (state === 2) {
+        console.log('⏸️ [Video] 일시정지')
+        stopAutoTracking()
+      }
+      // YT.PlayerState.ENDED = 0
+      else if (state === 0) {
+        console.log('🏁 [Video] 재생 완료')
+        stopAutoTracking()
+        completeVideo()
+      }
+    }
+
+    // 자동 추적 시작
+    function startAutoTracking() {
+      if (completed.value) {
+        console.log('🎬 [Video] 이미 완료된 영상')
+        return
+      }
+
+      isPlaying.value = true
+
+      if (trackingInterval.value) {
+        console.log('🎬 [Video] 이미 추적 중')
+        return
+      }
+
+      console.log('🎬 [Video] 자동 추적 시작')
+
+      // 5초마다 현재 시간 가져와서 저장
+      trackingInterval.value = setInterval(async () => {
+        if (player.value && player.value.getCurrentTime) {
+          const currentTime = Math.floor(player.value.getCurrentTime())
+
+          // 중복 업데이트 방지 - 1초 이상 차이날 때만 업데이트
+          if (Math.abs(currentTime - watchTime.value) >= 1) {
+            watchTime.value = currentTime
+            console.log('🎬 [Video] 시청 시간:', watchTime.value, '/', video.value.duration)
+
+            await saveProgress()
+
+            // 영상 완료 체크 (95% 이상 시청하면 완료로 간주)
+            if (watchTime.value >= video.value.duration * 0.95) {
+              await completeVideo()
+            }
+          }
+        }
+      }, 5000)
+    }
+
+    // 자동 추적 중지
+    function stopAutoTracking() {
+      isPlaying.value = false
+
+      if (trackingInterval.value) {
+        clearInterval(trackingInterval.value)
+        trackingInterval.value = null
+        console.log('🎬 [Video] 자동 추적 중지')
+
+        if (player.value && player.value.getCurrentTime) {
+          watchTime.value = Math.floor(player.value.getCurrentTime())
+          saveProgress()
+        }
+      }
     }
 
     // 데이터 로드
@@ -241,8 +360,13 @@ export default defineComponent({
           console.log('🎬 [Video] 영상:', videoData.title)
           console.log('🎬 [Video] 영상 길이:', videoData.duration, '초')
 
-          // 기존 진도 가져오기
           await loadProgress()
+
+          // YouTube API 로드 후 플레이어 초기화
+          await loadYouTubeAPI()
+          setTimeout(() => {
+            initPlayer()
+          }, 500)
         } else {
           console.log('🎬 [Video] 영상 없음')
         }
@@ -312,52 +436,6 @@ export default defineComponent({
       }
     }
 
-    // 시청 시작
-    function startTracking() {
-      if (completed.value) {
-        console.log('🎬 [Video] 이미 완료된 영상')
-        return
-      }
-
-      console.log('🎬 [Video] 시청 시작')
-      isTracking.value = true
-
-      // 5초마다 시청 시간 증가 및 저장
-      trackingInterval.value = setInterval(async () => {
-        watchTime.value += 5
-
-        console.log('🎬 [Video] 시청 시간:', watchTime.value, '/', video.value.duration)
-
-        // 진도 저장
-        await saveProgress()
-
-        // 영상 완료 체크
-        if (watchTime.value >= video.value.duration) {
-          await completeVideo()
-        }
-      }, 5000)
-    }
-
-    // 시청 일시정지
-    function stopTracking() {
-      console.log('🎬 [Video] 시청 일시정지')
-      isTracking.value = false
-
-      if (trackingInterval.value) {
-        clearInterval(trackingInterval.value)
-        trackingInterval.value = null
-      }
-    }
-
-    // 처음부터 다시 시작
-    function resetTracking() {
-      console.log('🎬 [Video] 처음부터 다시 시작')
-      stopTracking()
-      watchTime.value = 0
-      completed.value = false
-      saveProgress()
-    }
-
     // 진도 저장
     async function saveProgress() {
       try {
@@ -379,8 +457,10 @@ export default defineComponent({
 
     // 영상 완료 처리
     async function completeVideo() {
+      if (completed.value) return
+
       console.log('🎬 [Video] 영상 완료 처리')
-      stopTracking()
+      stopAutoTracking()
       completed.value = true
 
       try {
@@ -412,13 +492,13 @@ export default defineComponent({
 
     // 뒤로 가기
     function goBack() {
-      stopTracking()
+      stopAutoTracking()
       router.push({ name: 'category-detail', params: { id: route.params.id } })
     }
 
     // 퀴즈로 이동
     function goToQuiz() {
-      stopTracking()
+      stopAutoTracking()
       router.push({ name: 'quiz', params: { id: route.params.id } })
     }
 
@@ -427,8 +507,10 @@ export default defineComponent({
     })
 
     onBeforeUnmount(() => {
-      // 페이지 떠날 때 추적 중지
-      stopTracking()
+      stopAutoTracking()
+      if (player.value && player.value.destroy) {
+        player.value.destroy()
+      }
     })
 
     return {
@@ -436,16 +518,11 @@ export default defineComponent({
       category,
       video,
       watchTime,
-      isTracking,
+      isPlaying,
       completed,
       youtubeId,
       progressPercentage,
-      videoIframe,
-      origin,
       formatTime,
-      startTracking,
-      stopTracking,
-      resetTracking,
       goBack,
       goToQuiz
     }
@@ -485,17 +562,13 @@ export default defineComponent({
   background: #000;
   border-radius: 8px;
 
-  iframe {
+  #youtube-player {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
   }
-}
-
-.control-card {
-  background: white;
 }
 
 .completion-card {
