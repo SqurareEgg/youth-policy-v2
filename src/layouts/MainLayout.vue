@@ -26,12 +26,13 @@
         <nav class="desktop-nav gt-sm">
           <q-btn
             v-for="category in categories"
-            :key="category.name"
+            :key="category.id"
             flat
             dense
             :label="category.name"
             class="category-btn"
             color="grey-7"
+            @click="goToCategory(category)"
           />
         </nav>
 
@@ -76,12 +77,13 @@
           <div class="text-caption text-grey-6 q-mb-sm">카테고리</div>
           <q-btn
             v-for="category in categories"
-            :key="category.name"
+            :key="category.id"
             flat
             :label="category.name"
             class="full-width text-left"
             color="grey-7"
             align="left"
+            @click="goToCategory(category)"
           />
           <q-separator class="q-my-md" />
           <q-btn
@@ -129,13 +131,13 @@ export default defineComponent({
 
     const mobileMenuOpen = ref(false)
 
-    // 5대 정책 카테고리
+    // 5대 정책 카테고리 (ID는 Supabase 샘플 데이터와 일치)
     const categories = [
-      { name: '일자리' },
-      { name: '주거' },
-      { name: '교육' },
-      { name: '금융･복지･문화' },
-      { name: '참여' }
+      { name: '일자리', id: '11111111-1111-1111-1111-111111111111' },
+      { name: '주거', id: '22222222-2222-2222-2222-222222222222' },
+      { name: '교육', id: '33333333-3333-3333-3333-333333333333' },
+      { name: '금융･복지･문화', id: '44444444-4444-4444-4444-444444444444' },
+      { name: '참여', id: '55555555-5555-5555-5555-555555555555' }
     ]
 
     const showBackButton = computed(() => {
@@ -149,6 +151,15 @@ export default defineComponent({
     function goToMain() {
       console.log('🏠 [MainLayout] 메인 페이지로 이동')
       router.push('/main')
+      mobileMenuOpen.value = false
+    }
+
+    function goToCategory(category) {
+      console.log('📚 [MainLayout] 카테고리 이동:', category.name)
+      router.push({
+        name: 'category-detail',
+        params: { id: category.id }
+      })
       mobileMenuOpen.value = false
     }
 
@@ -189,6 +200,7 @@ export default defineComponent({
       categories,
       mobileMenuOpen,
       goToMain,
+      goToCategory,
       goToProfile,
       logout
     }
