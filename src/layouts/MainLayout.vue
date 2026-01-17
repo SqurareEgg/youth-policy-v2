@@ -1,22 +1,109 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- Header -->
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
+    <!-- Figma Style Header -->
+    <q-header class="bg-white text-grey-9" elevated>
+      <q-toolbar class="header-toolbar">
+        <!-- 뒤로가기 버튼 (메인이 아닐 때만) -->
         <q-btn
+          v-if="showBackButton"
           flat
           dense
           round
           icon="arrow_back"
-          v-if="showBackButton"
+          color="grey-7"
           @click="$router.go(-1)"
+          class="q-mr-sm"
         />
-        <q-toolbar-title>
-          {{ pageTitle }}
-        </q-toolbar-title>
-        <q-btn flat round dense icon="person" @click="goToProfile" />
-        <q-btn flat round dense icon="logout" @click="logout" />
+
+        <!-- 로고 -->
+        <div class="logo-section cursor-pointer" @click="goToMain">
+          <span class="logo-text">청년있슈</span>
+        </div>
+
+        <q-space />
+
+        <!-- 중앙 카테고리 - Desktop -->
+        <nav class="desktop-nav gt-sm">
+          <q-btn
+            v-for="category in categories"
+            :key="category.name"
+            flat
+            dense
+            :label="category.name"
+            class="category-btn"
+            color="grey-7"
+          />
+        </nav>
+
+        <q-space />
+
+        <!-- 우측 프로필/로그아웃 - Desktop -->
+        <div class="desktop-actions gt-sm">
+          <q-btn
+            flat
+            dense
+            icon="person"
+            label="프로필"
+            color="grey-7"
+            @click="goToProfile"
+            class="q-mr-sm"
+          />
+          <q-btn
+            flat
+            dense
+            icon="logout"
+            label="로그아웃"
+            color="primary"
+            @click="logout"
+          />
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          color="grey-7"
+          class="lt-md"
+          @click="mobileMenuOpen = !mobileMenuOpen"
+        />
       </q-toolbar>
+
+      <!-- Mobile Navigation -->
+      <div v-if="mobileMenuOpen" class="mobile-nav lt-md bg-white q-pa-md border-top">
+        <div class="q-gutter-sm">
+          <div class="text-caption text-grey-6 q-mb-sm">카테고리</div>
+          <q-btn
+            v-for="category in categories"
+            :key="category.name"
+            flat
+            :label="category.name"
+            class="full-width text-left"
+            color="grey-7"
+            align="left"
+          />
+          <q-separator class="q-my-md" />
+          <q-btn
+            flat
+            icon="person"
+            label="프로필"
+            class="full-width text-left"
+            color="grey-7"
+            align="left"
+            @click="goToProfile"
+          />
+          <q-btn
+            flat
+            icon="logout"
+            label="로그아웃"
+            class="full-width text-left"
+            color="primary"
+            align="left"
+            @click="logout"
+          />
+        </div>
+      </div>
     </q-header>
 
     <!-- Page Content -->
@@ -40,6 +127,17 @@ export default defineComponent({
     const router = useRouter()
     const route = useRoute()
 
+    const mobileMenuOpen = ref(false)
+
+    // 5대 정책 카테고리
+    const categories = [
+      { name: '일자리' },
+      { name: '주거' },
+      { name: '교육' },
+      { name: '금융･복지･문화' },
+      { name: '참여' }
+    ]
+
     const showBackButton = computed(() => {
       return route.name !== 'main'
     })
@@ -48,9 +146,16 @@ export default defineComponent({
       return route.meta.title || '청년 정책 교육'
     })
 
+    function goToMain() {
+      console.log('🏠 [MainLayout] 메인 페이지로 이동')
+      router.push('/main')
+      mobileMenuOpen.value = false
+    }
+
     function goToProfile() {
       console.log('👤 [MainLayout] 프로필 페이지로 이동')
       router.push('/profile')
+      mobileMenuOpen.value = false
     }
 
     async function logout() {
@@ -81,6 +186,9 @@ export default defineComponent({
     return {
       showBackButton,
       pageTitle,
+      categories,
+      mobileMenuOpen,
+      goToMain,
       goToProfile,
       logout
     }
@@ -89,7 +197,59 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.q-toolbar {
-  min-height: 56px;
+.header-toolbar {
+  min-height: 64px;
+  padding: 0 1.5rem;
+
+  @media (max-width: 600px) {
+    padding: 0 1rem;
+  }
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f97316;
+  letter-spacing: -0.02em;
+}
+
+.desktop-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.category-btn {
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.desktop-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mobile-nav {
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.border-top {
+  border-top: 1px solid #e5e7eb;
 }
 </style>
