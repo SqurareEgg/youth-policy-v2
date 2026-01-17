@@ -15,6 +15,7 @@
           <button
             v-for="category in categories"
             :key="category.name"
+            @click="handleCategoryClick(category.name)"
             class="text-sm text-gray-700 hover:text-[#F97316] transition-colors px-2 py-1 rounded-lg hover:bg-gray-50"
           >
             {{ category.name }}
@@ -55,6 +56,7 @@
             <button
               v-for="category in categories"
               :key="category.name"
+              @click="handleCategoryClick(category.name)"
               class="text-sm text-gray-700 hover:text-[#F97316] transition-colors py-2 block w-full text-left"
             >
               {{ category.name }}
@@ -132,6 +134,7 @@
           <div
             v-for="service in services"
             :key="service.title"
+            @click="handleServiceClick(service)"
             :class="[
               'bg-gradient-to-br rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all cursor-pointer group border border-gray-100 relative overflow-hidden text-white',
               service.gradient
@@ -191,12 +194,14 @@
 <script>
 import { defineComponent, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 
 export default defineComponent({
   name: 'LandingPage',
 
   setup() {
     const router = useRouter()
+    const $q = useQuasar()
     const mobileMenuOpen = ref(false)
     const cardNewsImage = new URL('@/assets/images/card-news.png', import.meta.url).href
 
@@ -213,37 +218,43 @@ export default defineComponent({
         title: '일자리',
         icon: 'work',
         description: '취업 지원, 창업 지원,\n직업훈련 등 일자리 정책',
-        gradient: 'from-blue-500 to-blue-600'
+        gradient: 'from-blue-500 to-blue-600',
+        link: '/main'
       },
       {
         title: '주거',
         icon: 'home',
         description: '청년 주택, 전월세 지원,\n주거비 보조 등 주거 정책',
-        gradient: 'from-orange-500 to-orange-600'
+        gradient: 'from-orange-500 to-orange-600',
+        link: '/main'
       },
       {
         title: '교육',
         icon: 'school',
         description: '학자금 지원, 교육비 지원,\n역량 개발 등 교육 정책',
-        gradient: 'from-green-400 to-green-500'
+        gradient: 'from-green-400 to-green-500',
+        link: '/main'
       },
       {
         title: '금융･복지･문화',
         icon: 'favorite',
         description: '금융 지원, 생활비 지원,\n문화활동 지원 등 복지 정책',
-        gradient: 'from-pink-400 to-pink-500'
+        gradient: 'from-pink-400 to-pink-500',
+        link: '/main'
       },
       {
         title: '참여',
         icon: 'groups',
         description: '청년활동 지원, 정책제안,\n권리보호 등 참여 정책',
-        gradient: 'from-purple-500 to-purple-600'
+        gradient: 'from-purple-500 to-purple-600',
+        link: '/main'
       },
       {
         title: '청년정책 카페',
         icon: 'local_cafe',
         description: '청년들의 소통 공간,\n정책 의견 공유 및 토론',
-        gradient: 'from-teal-400 to-teal-500'
+        gradient: 'from-teal-400 to-teal-500',
+        link: null // 준비중
       }
     ]
 
@@ -261,6 +272,38 @@ export default defineComponent({
       router.push('/auth/register')
     }
 
+    function handleCategoryClick(categoryName) {
+      console.log('📂 [Landing] 카테고리 클릭:', categoryName)
+      // 로그인 유도 후 메인으로 이동
+      $q.notify({
+        type: 'info',
+        message: '로그인 후 이용 가능합니다.',
+        position: 'top'
+      })
+      router.push('/auth/login')
+    }
+
+    function handleServiceClick(service) {
+      console.log('🎯 [Landing] 서비스 카드 클릭:', service.title)
+
+      if (service.link === null) {
+        // 준비중인 서비스 (청년정책 카페)
+        $q.notify({
+          type: 'warning',
+          message: `${service.title} 서비스는 현재 준비중입니다.`,
+          position: 'top'
+        })
+      } else {
+        // 5대 정책 카드 - 로그인 유도
+        $q.notify({
+          type: 'info',
+          message: '로그인 후 이용 가능합니다.',
+          position: 'top'
+        })
+        router.push('/auth/login')
+      }
+    }
+
     console.log('🏠 [Landing] 랜딩 페이지 로드')
 
     return {
@@ -270,7 +313,9 @@ export default defineComponent({
       services,
       toggleMobileMenu,
       goToLogin,
-      goToRegister
+      goToRegister,
+      handleCategoryClick,
+      handleServiceClick
     }
   }
 })

@@ -7,7 +7,7 @@
           청년 정책 교육
         </h4>
         <p class="text-subtitle1 text-grey-7 q-mb-lg">
-          6가지 필수 정책 카테고리를 학습하세요
+          5대 필수 정책 카테고리를 학습하세요
         </p>
 
         <!-- 전체 이수율 -->
@@ -54,44 +54,44 @@
         <div class="text-body1 text-grey-7 q-mt-md">카테고리 불러오는 중...</div>
       </div>
 
-      <!-- 카테고리 그리드 -->
-      <div v-else class="categories-grid">
+      <!-- 카테고리 그리드 (Figma 디자인) -->
+      <div v-else class="categories-grid-figma">
         <q-card
           v-for="category in categories"
           :key="category.id"
-          class="category-card cursor-pointer"
+          :class="['category-card-figma', 'cursor-pointer', category.gradient]"
           @click="goToCategory(category)"
         >
-          <q-card-section class="text-center">
-            <q-icon
-              :name="category.icon"
-              size="64px"
-              :color="category.color"
-              class="q-mb-md"
-            />
-            <div class="text-h6 text-weight-bold q-mb-sm">
-              {{ category.name }}
-            </div>
-            <div class="text-caption text-grey-7 q-mb-md">
-              {{ category.description }}
+          <q-card-section>
+            <!-- 카드 헤더 -->
+            <div class="card-header">
+              <h3 class="card-title">{{ category.name }}</h3>
+              <div class="icon-container">
+                <q-icon :name="category.icon" size="32px" class="text-white" />
+              </div>
             </div>
 
-            <!-- 카테고리별 진행률 -->
+            <!-- 카드 설명 -->
+            <p class="card-description">
+              {{ category.description }}
+            </p>
+
+            <!-- 진행률 -->
             <div class="progress-section">
-              <div class="text-caption text-grey-6 q-mb-xs">
+              <div class="progress-label">
                 이수율: {{ category.progress }}%
               </div>
               <q-linear-progress
                 :value="category.progress / 100"
-                :color="category.color"
+                color="white"
                 size="6px"
                 rounded
+                class="progress-bar"
               />
             </div>
-          </q-card-section>
 
-          <q-card-section class="card-footer">
-            <div class="text-caption text-grey-7">
+            <!-- 하단 정보 -->
+            <div class="card-footer-info">
               {{ category.videoCount }}개 영상 • {{ category.totalMinutes }}분
             </div>
           </q-card-section>
@@ -118,14 +118,38 @@ export default defineComponent({
     const categories = ref([])
     const loading = ref(true)
 
-    // 카테고리 색상 매핑
-    const colorMap = {
-      'location_city': 'deep-purple',
-      'home': 'primary',
-      'health_and_safety': 'pink',
-      'account_balance': 'green',
-      'how_to_vote': 'purple',
-      'school': 'blue'
+    // 5대 정책 기본 정보
+    const policyCategories = {
+      '일자리': {
+        icon: 'work',
+        gradient: 'gradient-blue',
+        description: '취업 지원, 창업 지원,\n직업훈련 등 일자리 정책',
+        order: 1
+      },
+      '주거': {
+        icon: 'home',
+        gradient: 'gradient-orange',
+        description: '청년 주택, 전월세 지원,\n주거비 보조 등 주거 정책',
+        order: 2
+      },
+      '교육': {
+        icon: 'school',
+        gradient: 'gradient-green',
+        description: '학자금 지원, 교육비 지원,\n역량 개발 등 교육 정책',
+        order: 3
+      },
+      '금융･복지･문화': {
+        icon: 'favorite',
+        gradient: 'gradient-pink',
+        description: '금융 지원, 생활비 지원,\n문화활동 지원 등 복지 정책',
+        order: 4
+      },
+      '참여': {
+        icon: 'groups',
+        gradient: 'gradient-purple',
+        description: '청년활동 지원, 정책제안,\n권리보호 등 참여 정책',
+        order: 5
+      }
     }
 
     // 전체 이수율 계산
@@ -142,7 +166,16 @@ export default defineComponent({
 
       try {
         if (!supabase) {
-          console.warn('⚠️ [Index] Supabase 미설정 - 더미 데이터 사용')
+          console.warn('⚠️ [Index] Supabase 미설정 - 기본 5대 정책 사용')
+          // Supabase 없을 때 기본 카테고리
+          categories.value = Object.keys(policyCategories).map((name, index) => ({
+            id: index + 1,
+            name,
+            ...policyCategories[name],
+            progress: 0,
+            videoCount: 0,
+            totalMinutes: 0
+          }))
           loading.value = false
           return
         }
@@ -152,6 +185,15 @@ export default defineComponent({
 
         if (!user) {
           console.error('❌ [Index] 사용자 로그인 필요')
+          // 로그인 안 했을 때도 기본 카테고리 표시
+          categories.value = Object.keys(policyCategories).map((name, index) => ({
+            id: index + 1,
+            name,
+            ...policyCategories[name],
+            progress: 0,
+            videoCount: 0,
+            totalMinutes: 0
+          }))
           loading.value = false
           return
         }
@@ -175,6 +217,14 @@ export default defineComponent({
         // 각 카테고리별 진도율 가져오기
         const categoriesWithProgress = await Promise.all(
           categoriesData.map(async (category) => {
+            // 카테고리 이름으로 5대 정책 매핑
+            const policyInfo = policyCategories[category.title] || {
+              icon: 'category',
+              gradient: 'gradient-grey',
+              description: category.description,
+              order: 999
+            }
+
             // 사용자의 해당 카테고리 진도율 조회
             const { data: progressData } = await supabase
               .from('user_category_progress')
@@ -197,17 +247,22 @@ export default defineComponent({
             return {
               id: category.id,
               name: category.title,
-              description: category.description,
-              icon: category.icon || 'category',
-              color: colorMap[category.icon] || 'grey',
+              description: policyInfo.description,
+              icon: policyInfo.icon,
+              gradient: policyInfo.gradient,
               progress: progressData?.total_progress || 0,
               videoCount,
-              totalMinutes
+              totalMinutes,
+              order: policyInfo.order
             }
           })
         )
 
+        // 5대 정책만 필터링하고 정렬
         categories.value = categoriesWithProgress
+          .filter(cat => policyCategories[cat.name])
+          .sort((a, b) => a.order - b.order)
+
         console.log('✅ [Index] 진도율 포함 카테고리 데이터 로딩 완료')
         console.log('📊 [Index] 전체 이수율:', overallProgress.value + '%')
 
@@ -218,6 +273,15 @@ export default defineComponent({
           message: '카테고리 데이터를 불러오는 중 오류가 발생했습니다.',
           position: 'top'
         })
+        // 에러 시에도 기본 카테고리 표시
+        categories.value = Object.keys(policyCategories).map((name, index) => ({
+          id: index + 1,
+          name,
+          ...policyCategories[name],
+          progress: 0,
+          videoCount: 0,
+          totalMinutes: 0
+        }))
       } finally {
         loading.value = false
       }
@@ -284,7 +348,8 @@ export default defineComponent({
   }
 }
 
-.categories-grid {
+// Figma 스타일 카테고리 그리드
+.categories-grid-figma {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
@@ -294,28 +359,111 @@ export default defineComponent({
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 1rem;
   }
 }
 
-.category-card {
+// Figma 스타일 카드
+.category-card-figma {
+  border-radius: 24px;
+  padding: 2rem;
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .icon-container {
+    width: 56px;
+    height: 56px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover .icon-container {
+    transform: scale(1.1);
+  }
+
+  .card-description {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: pre-line;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
   }
 
   .progress-section {
-    margin-top: 1rem;
+    margin-bottom: 1rem;
   }
 
-  .card-footer {
-    padding-top: 0;
-    border-top: 1px solid #e0e0e0;
+  .progress-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.5rem;
   }
+
+  .progress-bar {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .card-footer-info {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
+// 그라디언트 색상
+.gradient-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+}
+
+.gradient-pink {
+  background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+}
+
+.gradient-teal {
+  background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%);
+}
+
+.gradient-grey {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
 }
 
 @media (max-width: 600px) {
@@ -323,13 +471,16 @@ export default defineComponent({
     padding: 1rem 0.5rem;
   }
 
-  .category-card {
-    .q-icon {
-      font-size: 48px !important;
+  .category-card-figma {
+    padding: 1.5rem;
+
+    .card-title {
+      font-size: 1.25rem;
     }
 
-    .text-h6 {
-      font-size: 1rem;
+    .icon-container {
+      width: 48px;
+      height: 48px;
     }
   }
 }
