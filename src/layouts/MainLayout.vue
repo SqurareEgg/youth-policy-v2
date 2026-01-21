@@ -180,7 +180,7 @@ export default defineComponent({
           type: 'positive',
           message: '로그아웃되었습니다.'
         })
-        router.push('/landing')
+        router.push('/')
       } catch (error) {
         console.error('❌ [MainLayout] 로그아웃 실패:', error)
         $q.notify({
