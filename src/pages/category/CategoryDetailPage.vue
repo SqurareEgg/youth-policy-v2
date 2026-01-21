@@ -1,5 +1,6 @@
 <template>
   <q-page class="category-detail-page">
+    <!-- Loading State -->
     <div v-if="loading" class="flex flex-center" style="min-height: 400px">
       <div class="text-center">
         <q-spinner color="primary" size="50px" />
@@ -7,20 +8,26 @@
       </div>
     </div>
 
+    <!-- Main Content -->
     <div v-else class="page-wrapper">
       <!-- Header -->
       <div class="page-header bg-white border-bottom">
         <div class="header-container">
-          <q-btn flat dense icon="arrow_back" label="홈으로 돌아가기" @click="$router.push('/main')" class="back-btn text-grey-7" />
+          <q-btn
+            flat
+            dense
+            icon="arrow_back"
+            label="홈으로 돌아가기"
+            @click="$router.push('/main')"
+            class="back-btn text-grey-7 q-mb-md"
+          />
 
-          <div>
-            <h1 class="text-h4 text-weight-bold">{{ category.title }} 정책</h1>
-            <p class="text-grey-7 q-mt-sm">청년을 위한 {{ category.title }} 관련 정책을 학습하고 혜택을 받아보세요</p>
-          </div>
+          <h1 class="text-h4 text-weight-bold">{{ category.title }} 정책</h1>
+          <p class="text-grey-7 q-mt-sm">청년을 위한 {{ category.title }} 관련 정책을 학습하고 혜택을 받아보세요</p>
         </div>
       </div>
 
-      <!-- Main Content with Sidebar -->
+      <!-- Main Layout -->
       <div class="main-container">
         <!-- Left Sidebar - Desktop -->
         <aside class="sidebar gt-sm">
@@ -58,7 +65,7 @@
 
           <div class="content-area">
             <!-- Initial View: No Policy Selected -->
-            <div v-if="!selectedPolicy && !learningType">
+            <div v-if="!selectedPolicy">
               <!-- Category Introduction -->
               <div class="intro-card">
                 <h2 class="intro-title">{{ String(categoryIndex).padStart(2, '0') }}. {{ category.title }} 정책: 청년의 내일을 위한 맞춤형 지원</h2>
@@ -94,7 +101,12 @@
                     <span class="text-grey-7">학습 진행률</span>
                     <span class="text-primary text-weight-bold">{{ progress.total_progress || 0 }}% 완료</span>
                   </div>
-                  <q-linear-progress :value="(progress.total_progress || 0) / 100" color="primary" size="12px" rounded />
+                  <q-linear-progress
+                    :value="(progress.total_progress || 0) / 100"
+                    color="primary"
+                    size="12px"
+                    rounded
+                  />
                 </div>
               </div>
 
@@ -112,7 +124,13 @@
                     <h3 class="learning-card-subtitle">{{ category.title }} 정책 Q&A</h3>
                     <p class="learning-card-description">자주 묻는 질문과 답변을 확인하세요</p>
                   </div>
-                  <q-btn unelevated color="primary" label="학습하기" class="full-width" size="sm" />
+                  <q-btn
+                    unelevated
+                    color="primary"
+                    label="학습하기"
+                    class="full-width"
+                    size="sm"
+                  />
                 </div>
 
                 <!-- Video Learning -->
@@ -127,7 +145,13 @@
                     <h3 class="learning-card-subtitle">{{ category.title }} 정책 영상</h3>
                     <p class="learning-card-description">15:20</p>
                   </div>
-                  <q-btn unelevated color="primary" label="시청하기" class="full-width" size="sm" />
+                  <q-btn
+                    unelevated
+                    color="primary"
+                    label="시청하기"
+                    class="full-width"
+                    size="sm"
+                  />
                 </div>
 
                 <!-- Quiz Learning -->
@@ -148,7 +172,13 @@
                       <span class="text-weight-bold">10문제</span>
                     </div>
                   </div>
-                  <q-btn unelevated color="primary" label="시작하기" class="full-width" size="sm" />
+                  <q-btn
+                    unelevated
+                    color="primary"
+                    label="시작하기"
+                    class="full-width"
+                    size="sm"
+                  />
                 </div>
               </div>
             </div>
@@ -235,7 +265,6 @@ export default defineComponent({
     const category = ref({})
     const progress = ref({})
     const selectedPolicy = ref(null)
-    const learningType = ref(null)
 
     const categoryData = computed(() => {
       return categoryPoliciesDetailed[route.params.id] || { categoryIntro: '', policies: [] }
@@ -251,14 +280,6 @@ export default defineComponent({
       }
       return indexMap[route.params.id] || 1
     })
-
-    function getCategoryFocus(index) {
-      const focuses = [
-        '자립과 성장', '안정적인 생활', '역량 개발', '사회 참여',
-        '권리 보호', '미래 준비', '경제적 안정', '건강한 삶'
-      ]
-      return focuses[index % focuses.length]
-    }
 
     async function loadCategoryData() {
       console.log('📄 [CategoryDetail] 카테고리 ID:', route.params.id)
@@ -343,10 +364,8 @@ export default defineComponent({
       category,
       progress,
       selectedPolicy,
-      learningType,
       categoryData,
       categoryIndex,
-      getCategoryFocus,
       goToQnA,
       goToVideo,
       goToQuiz

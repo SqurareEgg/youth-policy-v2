@@ -76,12 +76,12 @@ async function guestOnly(to, from, next) {
 
 const routes = [
   // ============================================
-  // 랜딩 페이지 (루트) - 직접 렌더링으로 변경
+  // 로그인 페이지 (루트)
   // ============================================
   {
     path: '/',
     name: 'landing',
-    component: () => import('../pages/auth/LandingPage.vue'),
+    component: () => import('../pages/auth/LoginPage.vue'),
     beforeEnter: async (to, from, next) => {
       console.log('🔀 [Route] 루트 접근 - 로그인 체크')
       if (supabase) {
@@ -92,11 +92,11 @@ const routes = [
           return
         }
       }
-      console.log('🔀 [Route] 비로그인 상태 - 랜딩 페이지 표시')
+      console.log('🔀 [Route] 비로그인 상태 - 로그인 페이지 표시')
       next()
     },
     meta: {
-      title: '청년 정책 교육'
+      title: '로그인 - 청년 정책 교육'
     }
   },
 
