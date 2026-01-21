@@ -1,5 +1,5 @@
 <template>
-  <q-page class="flex flex-center bg-gradient">
+  <div class="fullscreen flex flex-center bg-gradient">
     <div class="error-container text-center">
       <q-icon name="error_outline" size="120px" color="white" class="q-mb-lg" />
 
@@ -34,7 +34,7 @@
         />
       </div>
     </div>
-  </q-page>
+  </div>
 </template>
 
 <script>
@@ -73,6 +73,14 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+.fullscreen {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
 .bg-gradient {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
