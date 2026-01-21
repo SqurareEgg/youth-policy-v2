@@ -62,7 +62,7 @@
               <!-- Category Introduction -->
               <div class="intro-card">
                 <h2 class="intro-title">{{ String(categoryIndex).padStart(2, '0') }}. {{ category.title }} 정책: 청년의 내일을 위한 맞춤형 지원</h2>
-                <p class="intro-text">{{ categoryData.intro }}</p>
+                <p class="intro-text">{{ categoryData.categoryIntro }}</p>
               </div>
 
               <!-- Policy Buttons Grid -->
@@ -155,32 +155,46 @@
 
             <!-- Policy Detail View -->
             <div v-if="selectedPolicy" class="policy-detail">
-              <!-- Policy Header -->
+              <!-- Policy Header Card -->
               <div class="policy-header-card">
-                <div class="policy-header-content">
-                  <div class="policy-header-info">
-                    <div class="policy-icon-wrapper-large">
-                      <q-icon :name="selectedPolicy.icon" size="20px" class="text-grey-7" />
+                <div class="policy-header-grid">
+                  <!-- Left: Text Content -->
+                  <div class="policy-header-text">
+                    <div class="policy-header-info">
+                      <div class="policy-icon-wrapper-large">
+                        <q-icon :name="selectedPolicy.icon" size="20px" class="text-grey-7" />
+                      </div>
+                      <div>
+                        <p class="policy-number">정책 {{ selectedPolicy.id }}</p>
+                        <h2 class="policy-title-large">{{ selectedPolicy.title }}</h2>
+                      </div>
                     </div>
-                    <div>
-                      <p class="policy-number">정책 {{ selectedPolicy.id }}</p>
-                      <h2 class="policy-title-large">{{ selectedPolicy.title }}</h2>
-                    </div>
+                    <!-- Policy Intro -->
+                    <p v-if="selectedPolicy.content" class="policy-intro-text">
+                      {{ selectedPolicy.content.intro }}
+                    </p>
+                  </div>
+
+                  <!-- Right: Image -->
+                  <div v-if="selectedPolicy.image" class="policy-header-image">
+                    <img
+                      :src="selectedPolicy.image"
+                      :alt="selectedPolicy.title"
+                      class="policy-image"
+                    />
                   </div>
                 </div>
               </div>
 
-              <!-- Policy Items -->
-              <div class="policy-items">
+              <!-- Policy Details -->
+              <div v-if="selectedPolicy.content && selectedPolicy.content.details" class="policy-items">
                 <div
-                  v-for="(item, index) in selectedPolicy.items"
+                  v-for="(detail, index) in selectedPolicy.content.details"
                   :key="index"
                   class="policy-item-card"
                 >
-                  <h3 class="policy-item-title">{{ item }}</h3>
-                  <p class="policy-item-description">
-                    {{ category.title }} 정책의 핵심 내용으로, 청년들의 {{ getCategoryFocus(index) }}을(를) 지원합니다.
-                  </p>
+                  <h3 class="policy-item-title">{{ detail.title }}</h3>
+                  <p class="policy-item-description">{{ detail.description }}</p>
                 </div>
               </div>
 
@@ -207,7 +221,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '../../boot/supabase'
 import { useQuasar } from 'quasar'
-import { categoryPolicies } from '../../data/categoryPolicies'
+import { categoryPoliciesDetailed } from '../../data/categoryPoliciesDetailed'
 
 export default defineComponent({
   name: 'CategoryDetailPage',
@@ -224,7 +238,7 @@ export default defineComponent({
     const learningType = ref(null)
 
     const categoryData = computed(() => {
-      return categoryPolicies[route.params.id] || { intro: '', policies: [] }
+      return categoryPoliciesDetailed[route.params.id] || { categoryIntro: '', policies: [] }
     })
 
     const categoryIndex = computed(() => {
@@ -717,8 +731,22 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.policy-header-content {
+.policy-header-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+.policy-header-text {
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 
   @media (min-width: 768px) {
     padding: 2rem;
@@ -730,6 +758,29 @@ export default defineComponent({
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+
+.policy-intro-text {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: #374151;
+  margin-top: 1rem;
+}
+
+.policy-header-image {
+  position: relative;
+  height: 16rem;
+
+  @media (min-width: 768px) {
+    height: 20rem;
+  }
+}
+
+.policy-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
 }
 
 .policy-icon-wrapper-large {
