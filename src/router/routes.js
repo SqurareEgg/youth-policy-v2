@@ -62,8 +62,8 @@ async function guestOnly(to, from, next) {
     }
 
     if (session) {
-      console.log('❌ [Guest Guard] 이미 로그인됨 - 홈으로 리다이렉트')
-      next('/')
+      console.log('❌ [Guest Guard] 이미 로그인됨 - 메인으로 리다이렉트')
+      next('/main')
     } else {
       console.log('✅ [Guest Guard] 비로그인 - 통과')
       next()
